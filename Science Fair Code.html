@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Commute Carbon Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 0;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: white;
+    text-align: center;
+}
+
+.header {
+    background: linear-gradient(90deg, #22c55e, #0ea5e9);
+    padding: 20px;
+}
+
+.container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+.transport-btn {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #334155;
+    color: white;
+}
+
+.transport-btn.active {
+    background: #22c55e;
+}
+
+button {
+    background: #22c55e;
+    border: none;
+    padding: 12px;
+    width: 90%;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+canvas {
+    background: white;
+    border-radius: 10px;
+    padding: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h1>🚗 Commute Carbon Tracker</h1>
+<p>Measure your school transportation impact</p>
+</div>
+
+<div class="container">
+
+<div class="card">
+<h2>Enter Your Commute</h2>
+
+<input id="distance" type="number" placeholder="Distance to school (miles)">
+
+<h3>Choose Transportation</h3>
+
+<div>
+<button class="transport-btn" onclick="setTransport(0.4, this)">🚗 Car (alone)</button>
+<button class="transport-btn" onclick="setTransport(0.2, this)">👥 Carpool</button>
+<button class="transport-btn" onclick="setTransport(0.1, this)">🚌 Bus</button>
+<button class="transport-btn" onclick="setTransport(0, this)">🚶 Walk/Bike</button>
+</div>
+
+<input id="days" type="number" placeholder="Days per week (ex: 5)">
+
+<button onclick="calculate()">Calculate Impact</button>
+</div>
+
+<div class="card">
+<h2 id="result">Your Results</h2>
+<h3 id="feedback"></h3>
+<h4 id="comparisonPeople"></h4>
+
+<canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<script>
+
+let transportFactor = 0;
+let users = JSON.parse(localStorage.getItem("users")) || [];
+
+function setTransport(value, btn) {
+    transportFactor = value;
+
+    let buttons = document.querySelectorAll(".transport-btn");
+    buttons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+}
+
+function getAverage() {
+    let sum = 0;
+    for (let u of users) sum += u;
+    return users.length ? sum / users.length : 0;
+}
+
+function calculate() {
+
+let distance = Number(document.getElementById("distance").value);
+let days = Number(document.getElementById("days").value);
+
+let daily = distance * transportFactor;
+let yearly = daily * days * 36;
+
+// save user data
+users.push(daily);
+localStorage.setItem("users", JSON.stringify(users));
+
+let avg = getAverage();
+
+// show results
+document.getElementById("result").innerText =
+"Daily: " + daily.toFixed(2) + " kg CO₂ | Yearly: " + yearly.toFixed(1) + " kg";
+
+// feedback
+let feedback = "";
+let impact = "";
+
+// transport feedback
+if (transportFactor === 0.4) {
+    feedback = "🚗 High emissions. Carpooling can significantly reduce your impact.";
+}
+else if (transportFactor === 0.2) {
+    feedback = "👥 Good choice. Consider bus or biking for even lower emissions.";
+}
+else if (transportFactor === 0.1) {
+    feedback = "🚌 Efficient transportation with relatively low emissions.";
+}
+else {
+    feedback = "🚶 Excellent! This produces no direct carbon emissions.";
+}
+
+// environmental explanation
+if (daily > 5) {
+    impact = "Your commute produces a high level of carbon emissions, which contributes to climate change by increasing greenhouse gases in the atmosphere. This can lead to rising temperatures and more extreme weather.";
+}
+else if (daily > 1) {
+    impact = "Your emissions are moderate. While not extreme, repeated daily emissions from many people can still significantly impact the environment over time.";
+}
+else {
+    impact = "Your commute produces very low emissions, helping reduce pollution and protect ecosystems.";
+}
+
+// compare to others
+let compareText = "";
+
+if (users.length > 1) {
+    if (daily > avg) {
+        compareText = `You are ABOVE average (${avg.toFixed(2)} kg CO₂ per day).`;
+    } else {
+        compareText = `You are BELOW average (${avg.toFixed(2)} kg CO₂ per day).`;
+    }
+}
+
+// display text
+document.getElementById("feedback").innerHTML =
+`<strong>${feedback}</strong><br><br>${impact}`;
+
+document.getElementById("comparisonPeople").innerText = compareText;
+
+// chart
+new Chart(document.getElementById("chart"), {
+type: "bar",
+data: {
+labels: ["You", "Average"],
+datasets: [{
+label: "Daily CO₂ Emissions",
+data: [daily, avg]
+}]
+}
+});
+
+}
+
+</script>
+
+</body>
+</html>
